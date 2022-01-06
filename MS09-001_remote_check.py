@@ -1,14 +1,22 @@
+#! /bin/env python3
 # coding: utf8
 # MS09-001 SMB Could Allow Remote Code Execution (958687) - Remote Check
 # Author: tntC4stl3
-# http://tntcastle.net
+# Modified by: executionByFork
 # [+] test xp sp2, win 7 sp0
-# Reference: http://openvas.komma-nix.de/nasl.php?oid=900233
-#            http://hi.baidu.com/netcicala/item/620972bb2454f3a7ebba934a
 
 import impacket
 from impacket import smb
 from impacket import nmb
+
+
+def comp(x, intY):
+    if type(x) is int:
+        return x == intY
+    elif type(x) is str:
+        return ord(x) == intY
+
+    raise TypeError("Value to check is not an integer or string.")
 
 
 def ms09001(remoteHost):
@@ -88,24 +96,26 @@ def ms09001(remoteHost):
     writeAndX['Parameters']['Remaining'] = 72
     writeAndX['Parameters']['_reserved'] = 0xffffffff
     writeAndX['Parameters']['DataLength'] = 72
-    writeAndX['Parameters']['DataOffset'] = 200 
+    writeAndX['Parameters']['DataOffset'] = 200
     writeAndX['Parameters']['HighOffset'] = 0
-    
+
     writeAndX['Data'] = data
     r.sendSMB(smbPack)
     resp = r.recvSMB()
     r.close(tid, fid)
 
-    # Check the response and decide OS is vulnerable
-    if (resp and ord(resp.rawData[4]) == 47 and ord(resp.rawData[5]) == 0  and
-        ord(resp.rawData[6]) == 0 and ord(resp.rawData[7]) == 0 and ord(resp.rawData[8]) == 0):        
+    # Check the response and decide if OS is vulnerable
+    if ( resp and comp(resp.rawData[4], 47) and comp(resp.rawData[5], 0) and
+         comp(resp.rawData[6], 0) and comp(resp.rawData[7], 0) and
+         comp(resp.rawData[8], 0) ):
         return 1
     else:
         return 0
 
 if __name__ == '__main__':
-    remoteHost = '192.168.12.38'
+    # TODO: Read host from arguments
+    remoteHost = '<TARGET_HOST>'
     if ms09001(remoteHost):
-        print '!!! VULN !!!'
+        print('!!! VULNERABLE !!!')
     else:
-        print 'patched or not effected'
+        print('patched or not affected')
